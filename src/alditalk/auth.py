@@ -56,6 +56,23 @@ async def reload(page: Any) -> Any:
     return await _retry_nav(lambda: page.reload(wait_until="domcontentloaded"), "reload")
 
 
+async def hard_reload(page: Any) -> Any:
+    """Ctrl+Shift+R: reload while bypassing the browser cache, so no stale data is shown."""
+
+    async def _do() -> None:
+        cdp = await page.context.new_cdp_session(page)
+        try:
+            async with page.expect_navigation(wait_until="domcontentloaded", timeout=30_000):
+                await cdp.send("Page.reload", {"ignoreCache": True})
+        finally:
+            try:
+                await cdp.detach()
+            except Exception:  # noqa: BLE001
+                pass
+
+    return await _retry_nav(_do, "hard reload")
+
+
 class BadCredentials(Exception):
     pass
 
@@ -236,7 +253,11 @@ async def ensure_on_overview(page: Any, s: Settings, h: Humanizer, state: State)
         route = "goto"
     logged_in = False
     if route == "reload":
-        await reload(page)
+        if s.hard_refresh:
+            route = "hard_reload"
+            await hard_reload(page)
+        else:
+            await reload(page)
     elif route == "via_bookings":
         await goto(page, BOOKINGS_URL)
         await settle(page)

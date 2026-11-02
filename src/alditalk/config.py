@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     quiet_max_s: float = 2400.0
     quiet_busy_rate_mb_min: float = 5.0
 
+    # --- Refresh: True = Ctrl+Shift+R every time (~1.2 MB per check, measured 2026-11-02);
+    #     False = normal reload (~30 KB). Either way readings must come from the network, not the cache.
+    hard_refresh: bool = True
+
     # --- Session keep-alive: the portal logs out after ~20 min idle (measured 2026-11-02).
     #     Outside quiet hours, never wait longer than this, so it rarely has to log in again.
     keep_session_alive: bool = True

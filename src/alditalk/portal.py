@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from .auth import ensure_on_overview, reload, settle
+from .auth import ensure_on_overview, hard_reload, settle
 from .browser import BrowserSession
 from .parsing import Usage, describe_packs, pick_data_usage, usage_from_offers
 
@@ -115,25 +115,41 @@ class Portal:
         return {**info, "browser_started": started}
 
     async def _reload(self) -> None:
+        """Hard refresh (cache bypassed) and mark the moment, so only newer data counts."""
         self._nav_at = time.time()
-        await reload(self.page)
+        await hard_reload(self.page)
         await settle(self.page)
 
     # ------------------------------------------------------------- reading
-    async def read_usage(self, timeout_s: float = 20.0) -> Usage:
-        """Exact numbers from the portal's own API call; page text as fallback."""
+    async def _fresh_api_usage(self, timeout_s: float) -> Usage | None:
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            usage = usage_from_offers(self.browser.latest_api(OFFERS_API, since=self._nav_at))
+            data = self.browser.latest_api(OFFERS_API, since=self._nav_at, fresh_only=True)
+            usage = usage_from_offers(data)
             if usage:
                 return usage
-            dom = await self._usage_from_tiles()
-            if dom and time.monotonic() > deadline - timeout_s / 2:
-                log.info("Offers API not seen; using page text")
-                return dom
-            await asyncio.sleep(0.7)
+            await asyncio.sleep(0.5)
+        return None
+
+    async def read_usage(self, timeout_s: float = 20.0) -> Usage:
+        """Exact numbers from the portal's API, fetched over the network after the last page load.
+
+        Never trusts cached values: if no fresh API response shows up (cache hit, in-app
+        navigation, slow page), it hard-refreshes once and waits again. Page text is the
+        last resort, and only right after a hard refresh.
+        """
+        usage = await self._fresh_api_usage(timeout_s / 2)
+        if usage:
+            return usage
+        cached = self.browser.latest_api(OFFERS_API, since=self._nav_at) is not None
+        log.info("No fresh data from the portal API%s; hard-refreshing", " (got a cached copy)" if cached else "")
+        await self._reload()
+        usage = await self._fresh_api_usage(timeout_s)
+        if usage:
+            return usage
         dom = await self._usage_from_tiles()
         if dom:
+            log.warning("Portal API not seen even after a hard refresh; using page text")
             return dom
         texts = await self.page.evaluate(DEEP_TEXTS_JS)
         picked = pick_data_usage(texts)

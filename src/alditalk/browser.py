@@ -79,7 +79,7 @@ class BrowserSession:
         self.context: BrowserContext | None = None
         self.page: Page | None = None
         self._started_at = 0.0
-        self.api: dict[str, tuple[float, Any]] = {}  # endpoint path -> (time, json)
+        self.api: dict[str, tuple[float, Any, bool]] = {}  # endpoint path -> (time, json, from_network)
 
     @property
     def started_at(self) -> float:
@@ -201,7 +201,9 @@ class BrowserSession:
                 return
             if "json" not in (response.headers.get("content-type") or ""):
                 return
-            self.api[url.path] = (time.time(), await response.json())
+            # No server address means Chrome answered from its cache (or a service worker): not fresh.
+            from_network = (await response.server_addr()) is not None and not response.from_service_worker
+            self.api[url.path] = (time.time(), await response.json(), from_network)
         except Exception:  # noqa: BLE001 - bodies of redirects etc. are unavailable
             return
 
@@ -227,14 +229,21 @@ class BrowserSession:
         self._prune_debug()
         return stem
 
-    def latest_api(self, path_suffix: str, since: float) -> Any | None:
-        """JSON of the newest captured endpoint ending in `path_suffix`, if fetched after `since`."""
-        hits = [(t, body) for path, (t, body) in self.api.items() if path.endswith(path_suffix) and t >= since]
+    def latest_api(self, path_suffix: str, since: float, fresh_only: bool = False) -> Any | None:
+        """JSON of the newest captured endpoint ending in `path_suffix`, if fetched after `since`.
+
+        With fresh_only, responses Chrome served from its cache are ignored.
+        """
+        hits = [
+            (t, body)
+            for path, (t, body, net) in self.api.items()
+            if path.endswith(path_suffix) and t >= since and (net or not fresh_only)
+        ]
         return max(hits, key=lambda x: x[0])[1] if hits else None
 
     def save_api(self, path: Path) -> None:
         """For recon only. Contains personal data: stays local in state/ (gitignored)."""
-        data = {p: body for p, (_, body) in self.api.items()}
+        data = {p: body for p, (_, body, _net) in self.api.items()}
         path.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
 
     def _prune_debug(self) -> None:

@@ -90,6 +90,10 @@ refused within 30 s of the previous check.
 - **Fallback:** the tile text on the overview ("Noch 44,7 GB von 50 GB · Inland").
 - **Claim:** the round `+ 1 GB` button (`one-button[slot="action"]`) inside the Inland tile. After clicking, the bot
   reloads the page and checks that the volume went up by ≥ 800 MB.
+- **Always fresh:** each check is a hard refresh (Ctrl+Shift+R, browser cache bypassed). A reading only counts if
+  the API response came over the network after that page load. Otherwise the bot hard-refreshes again before
+  trusting anything. A hard refresh costs ~1.2 MB vs ~30 KB for a normal reload (the data API is never cached
+  either way). Set `HARD_REFRESH=false` to save mobile data.
 - Chrome drops session cookies on exit, so they're kept in `state/session-cookies.json` (`chmod 600`). That way a
   restart doesn't have to log in again.
 

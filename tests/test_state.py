@@ -47,3 +47,16 @@ def test_heartbeat(tmp_path):
     write_heartbeat(tmp_path, now=100.0)
     assert heartbeat_age(tmp_path, now=160.0) == pytest.approx(60.0)
     assert heartbeat_age(tmp_path / "missing") is None
+
+
+def test_latest_api_can_ignore_cached_responses(settings):
+    from alditalk.browser import BrowserSession
+
+    b = BrowserSession(settings)
+    path = "/scs/bff/scs-209-selfcare-dashboard-bff/selfcare-dashboard/v1/offers"
+    b.api[path] = (100.0, {"v": "cached"}, False)  # served from Chrome's cache
+    assert b.latest_api("/v1/offers", since=50) == {"v": "cached"}
+    assert b.latest_api("/v1/offers", since=50, fresh_only=True) is None
+    b.api[path] = (120.0, {"v": "fresh"}, True)
+    assert b.latest_api("/v1/offers", since=50, fresh_only=True) == {"v": "fresh"}
+    assert b.latest_api("/v1/offers", since=130, fresh_only=True) is None  # older than the last page load
