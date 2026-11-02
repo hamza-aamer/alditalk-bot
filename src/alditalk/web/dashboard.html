@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ALDI TALK Bot</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%232a78d6' stroke-width='4'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%232a78d6' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f3f3f0;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6;
+  --series-1-wash: rgba(42, 120, 214, 0.10);
+  --series-1-track: #cde2fb;
+  --series-2: #eb6834;
+  --good: #0ca30c;
+  --good-text: #006300;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --warning-track: rgba(250, 178, 25, 0.22);
+  --critical-track: rgba(208, 59, 59, 0.16);
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-1-wash: rgba(57, 135, 229, 0.12);
+    --series-1-track: #0d366b;
+    --series-2: #d95926;
+    --good-text: #0ca30c;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --series-1: #3987e5;
+  --series-1-wash: rgba(57, 135, 229, 0.12);
+  --series-1-track: #0d366b;
+  --series-2: #d95926;
+  --good-text: #0ca30c;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+
+/* Header */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.brand { font-weight: 650; font-size: 16px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 20px; height: 20px; }
+.brand .sub { color: var(--text-muted); font-weight: 400; }
+.spacer { flex: 1; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); font-weight: 550; }
+.status svg { width: 16px; height: 16px; flex: none; }
+.status .detail { color: var(--text-secondary); font-weight: 400; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); }
+.iconbtn { border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); border-radius: 8px;
+  height: 32px; padding: 0 10px; font: inherit; cursor: pointer; }
+.iconbtn:hover { color: var(--text-primary); }
+
+/* Filter row */
+.filters { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+.seg button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; padding: 5px 12px;
+  border-radius: 7px; cursor: pointer; }
+.seg button:hover { color: var(--text-primary); }
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--text-primary); font-weight: 600; }
+.updated { color: var(--text-muted); font-size: 12px; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { font-size: 14px; font-weight: 600; margin: 0; }
+.card .subtitle { color: var(--text-secondary); font-size: 13px; margin: 2px 0 0; }
+.card-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.card-head .grow { flex: 1; min-width: 0; }
+.linkbtn { border: 0; background: none; color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer;
+  padding: 4px 6px; border-radius: 6px; white-space: nowrap; }
+.linkbtn:hover { background: var(--surface-2); color: var(--text-primary); }
+.grid { display: grid; gap: 14px; }
+.row-hero { grid-template-columns: minmax(0, 1.25fr) minmax(0, 2fr); }
+.row-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 860px) { .row-hero, .row-2 { grid-template-columns: minmax(0, 1fr); } }
+section { margin-bottom: 14px; }
+
+/* Hero */
+.hero-label { color: var(--text-secondary); font-size: 13px; }
+.hero-value { font-size: 52px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0 2px; }
+.hero-sub { color: var(--text-secondary); }
+.meter { position: relative; height: 10px; border-radius: 999px; background: var(--series-1-track); margin: 18px 0 6px; }
+.meter[data-level="warning"] { background: var(--warning-track); }
+.meter[data-level="critical"] { background: var(--critical-track); }
+.meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--series-1); min-width: 10px; }
+.meter[data-level="warning"] .fill { background: var(--warning); }
+.meter[data-level="critical"] .fill { background: var(--critical); }
+.meter .tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); border-radius: 1px; }
+.meter-legend { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 12px; }
+.hero-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px;
+  padding-top: 14px; border-top: 1px solid var(--grid); }
+.hero-meta .k { color: var(--text-muted); font-size: 12px; }
+.hero-meta .v { font-weight: 600; font-size: 15px; }
+.hero-meta .s { color: var(--text-secondary); font-size: 12px; }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; align-content: start; }
+.kpi { padding: 4px 16px 14px; border-left: 1px solid var(--grid); }
+.kpi:nth-child(3n+1) { border-left: 0; padding-left: 0; }
+.kpi:nth-child(n+4) { padding-top: 14px; border-top: 1px solid var(--grid); }
+.kpi .label { color: var(--text-secondary); font-size: 13px; }
+.kpi .value { font-size: 26px; font-weight: 650; letter-spacing: -0.01em; margin-top: 2px; }
+.kpi .note { color: var(--text-muted); font-size: 12px; }
+@media (max-width: 560px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi { border-left: 0 !important; padding-left: 0 !important; border-top: 1px solid var(--grid); padding-top: 12px; }
+  .hero-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-value { font-size: 44px; }
+}
+
+/* Charts */
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart svg:focus { outline: none; }
+.chart svg:focus-visible { outline: 2px solid var(--series-1); outline-offset: 4px; border-radius: 4px; }
+.chart text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .baseline { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .threshold { stroke: var(--text-secondary); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .threshold-label { fill: var(--text-secondary); font-size: 11px; }
+.chart .halo { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.chart .end-label { fill: var(--text-primary); font-weight: 600; font-size: 12px; }
+.chart .crosshair { stroke: var(--text-secondary); stroke-width: 1; shape-rendering: crispEdges; pointer-events: none; }
+.chart .bar { transition: opacity .12s; }
+.chart .bar.dim { opacity: .45; }
+.chart.loading, .tbl-wrap.loading { opacity: .6; }
+.empty { color: var(--text-muted); text-align: center; padding: 48px 0; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12px; margin: 0 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.key-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.key-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.key-hair { width: 14px; height: 0; border-top: 1px solid var(--text-secondary); display: inline-block; }
+.chart-foot { color: var(--text-secondary); font-size: 12px; margin-top: 6px; }
+
+.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); font-size: 12px; white-space: nowrap;
+  z-index: 5; opacity: 0; transition: opacity .08s; }
+.tooltip.on { opacity: 1; }
+.tooltip .t-head { color: var(--text-muted); margin-bottom: 3px; }
+.tooltip .t-row { display: flex; align-items: center; gap: 7px; }
+.tooltip .t-row b { font-size: 13px; color: var(--text-primary); }
+.tooltip .t-row span.lbl { color: var(--text-secondary); }
+
+/* Tables */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--text-muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; color: var(--text-primary); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.muted { color: var(--text-secondary); }
+td.wrap { white-space: normal; min-width: 220px; color: var(--text-secondary); }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-flex; align-items: center; gap: 5px; }
+.pill svg { width: 12px; height: 12px; flex: none; }
+.more { margin-top: 8px; }
+.tabs { display: inline-flex; gap: 2px; }
+.tabs button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 7px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface-2); color: var(--text-primary); font-weight: 600; }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); border-radius: 8px;
+  height: 32px; padding: 0 12px; font: inherit; font-weight: 550; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.primary { background: var(--series-1); border-color: transparent; color: #fff; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--series-1); }
+.btn svg { width: 14px; height: 14px; }
+.toast { font-size: 12px; color: var(--text-secondary); }
+.row-snap { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+@media (max-width: 860px) { .row-snap { grid-template-columns: minmax(0, 1fr); } }
+.snap-frame { display: block; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-2); aspect-ratio: 16 / 9; }
+.snap-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.snap-cap { color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+.sched { list-style: none; margin: 4px 0 0; padding: 0; }
+.sched li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 4px 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
+.sched li:last-child { border-bottom: 0; }
+.sched .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--grid); }
+.sched li.now .dot { background: var(--series-1); box-shadow: 0 0 0 3px var(--series-1-wash); }
+.sched .when { font-weight: 550; }
+.sched li.now .when::after { content: "now"; margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--series-1); }
+.sched .how { grid-column: 2; color: var(--text-secondary); font-size: 13px; }
+.note-box { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); color: var(--text-secondary); font-size: 12.5px; }
+.foot { color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 24px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="var(--series-1)" stroke-width="3.5"/><path d="M16 10v12M10 16h12" stroke="var(--series-1)" stroke-width="3.5" stroke-linecap="round"/></svg>
+      ALDI TALK bot <span class="sub">· auto-rebook</span>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite"><span class="detail">Loading…</span></div>
+    <span id="mode" class="chip" hidden>Dry run</span>
+    <div class="spacer"></div>
+    <button id="btn-check" class="btn primary" type="button" title="Run one check now">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Check now</button>
+    <button id="btn-hold" class="btn" type="button">Pause</button>
+    <button id="theme" class="iconbtn" type="button" title="Theme">Theme: auto</button>
+  </header>
+
+  <div class="filters">
+    <div class="seg" role="group" aria-label="Time range">
+      <button type="button" data-range="24h" aria-pressed="true">Last 24 hours</button>
+      <button type="button" data-range="7d" aria-pressed="false">7 days</button>
+      <button type="button" data-range="30d" aria-pressed="false">30 days</button>
+    </div>
+    <span id="updated" class="updated"></span>
+    <span id="toast" class="toast" role="status" aria-live="polite"></span>
+  </div>
+
+  <section class="grid row-hero">
+    <div class="card" id="hero">
+      <div class="hero-label">Inland data left</div>
+      <div class="hero-value" id="hero-value">–</div>
+      <div class="hero-sub" id="hero-sub">No reading yet</div>
+      <div class="meter" id="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Data left">
+        <div class="fill" id="meter-fill" style="width:0"></div>
+        <div class="tick" id="meter-tick" title="1 GB: rebook line"></div>
+      </div>
+      <div class="meter-legend"><span id="meter-left">0</span><span id="meter-tick-label">▲ 1 GB rebook line</span><span id="meter-right"></span></div>
+      <div class="hero-meta">
+        <div><div class="k">Last checked</div><div class="v" id="m-last">–</div><div class="s" id="m-last-s"></div></div>
+        <div><div class="k">Next check</div><div class="v" id="m-next">–</div><div class="s" id="m-next-s"></div></div>
+        <div><div class="k">Usage rate</div><div class="v" id="m-rate">–</div><div class="s" id="m-rate-s"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="grow"><h2 id="kpi-title">Last 24 hours</h2><p class="subtitle">Everything below follows the time range</p></div></div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="grow"><h2>Data left over time</h2><p class="subtitle">Every successful check, with each free 1 GB claim</p></div>
+      <button class="linkbtn" type="button" data-toggle="c-remaining">Show table</button>
+    </div>
+    <div class="legend">
+      <span><i class="key-line" style="background:var(--series-1)"></i>Data left</span>
+      <span><i class="key-dot" style="background:var(--series-2)"></i>Claim (+1 GB)</span>
+      <span><i class="key-hair"></i>1 GB rebook line</span>
+    </div>
+    <div class="chart" id="c-remaining"></div>
+  </section>
+
+  <section class="grid row-snap">
+    <div class="card">
+      <div class="card-head">
+        <div class="grow"><h2>Portal snapshot</h2><p class="subtitle">What the bot's browser saw. Includes your number; stays on this PC.</p></div>
+        <div class="tabs" role="tablist" aria-label="Snapshot">
+          <button role="tab" type="button" aria-selected="true" data-snap="latest">Last check</button>
+          <button role="tab" type="button" aria-selected="false" data-snap="error">Last error</button>
+        </div>
+      </div>
+      <a class="snap-frame" id="snap-link" target="_blank" rel="noopener"><img id="snap-img" alt="Screenshot of the ALDI TALK portal overview"></a>
+      <div class="snap-cap" id="snap-cap">No snapshot yet</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="grow"><h2>How often it checks</h2><p class="subtitle">Every wait is randomized; these are typical ranges</p></div></div>
+      <ul class="sched" id="sched"></ul>
+      <div class="note-box" id="sched-note"></div>
+    </div>
+  </section>
+
+  <section class="grid row-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="grow"><h2 id="usage-title">Data used vs. claimed, per hour</h2><p class="subtitle">Used = drops between checks; claimed = verified free GBs</p></div>
+        <button class="linkbtn" type="button" data-toggle="c-usage">Show table</button>
+      </div>
+      <div class="legend">
+        <span><i class="key-rect" style="background:var(--series-1)"></i>Used</span>
+        <span><i class="key-rect" style="background:var(--series-2)"></i>Claimed</span>
+      </div>
+      <div class="chart" id="c-usage"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="grow"><h2>Time between checks</h2><p class="subtitle">Randomized on purpose, so there's no fixed rhythm</p></div>
+        <button class="linkbtn" type="button" data-toggle="c-intervals">Show table</button>
+      </div>
+      <div class="chart" id="c-intervals"></div>
+      <div class="chart-foot" id="intervals-foot"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="grow">
+        <div class="tabs" role="tablist" aria-label="History">
+          <button role="tab" type="button" aria-selected="true" data-tab="checks">Checks</button>
+          <button role="tab" type="button" aria-selected="false" data-tab="claims">Claims</button>
+          <button role="tab" type="button" aria-selected="false" data-tab="events">Events</button>
+        </div>
+      </div>
+      <span class="updated" id="tab-count"></span>
+    </div>
+    <div class="tbl-wrap" id="history"></div>
+    <div class="more"><button class="linkbtn" type="button" id="more" hidden>Show more</button></div>
+  </section>
+
+  <div class="foot">Read-only · local only · refreshes every 15 s · data from <code>state/history.db</code></div>
+</div>
+
+<script>
+"use strict";
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const state = { range: "24h", data: null, tab: "checks", rows: 30, tables: new Set(), timer: null, snap: "latest" };
+
+  // ---------- storage (per-viewer conveniences only) ----------
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+  };
+
+  // ---------- formatting ----------
+  const nf1 = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const nf2 = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const nf0 = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
+  const tFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const tsFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const dShort = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+  const wd = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
+
+  function gb(mb, digits = 2) {
+    if (mb == null || isNaN(mb)) return "–";
+    if (Math.abs(mb) < 1024) return `${nf0.format(mb)} MB`;
+    const f = digits === 0 ? nf0 : digits === 1 ? nf1 : nf2;
+    return `${f.format(mb / 1024)} GB`;
+  }
+  function signedGb(mb) {
+    if (mb == null || isNaN(mb)) return "–";
+    if (Math.abs(mb) < 0.5) return "±0";
+    return (mb > 0 ? "+" : "−") + gb(Math.abs(mb));
+  }
+  function dur(s) {
+    if (s == null || isNaN(s)) return "–";
+    s = Math.max(0, Math.round(s));
+    if (s < 60) return `${s} s`;
+    const m = Math.floor(s / 60), r = s % 60;
+    if (m < 60) return r && m < 10 ? `${m} min ${r} s` : `${m} min`;
+    const h = Math.floor(m / 60), mm = m % 60;
+    return mm ? `${h} h ${mm} min` : `${h} h`;
+  }
+  function clock(s) { // countdown mm:ss
+    s = Math.max(0, Math.round(s));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    const pad = (n) => String(n).padStart(2, "0");
+    return h ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`;
+  }
+  function ago(ts) {
+    const s = Date.now() / 1000 - ts;
+    if (s < 45) return "just now";
+    if (s < 3600) return `${Math.round(s / 60)} min ago`;
+    if (s < 86400) return `${(s / 3600).toFixed(s < 36000 ? 1 : 0)} h ago`;
+    return `${Math.round(s / 86400)} d ago`;
+  }
+  function when(ts) {
+    const d = new Date(ts * 1000);
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? tsFmt.format(d) : `${dShort.format(d)}, ${tFmt.format(d)}`;
+  }
+
+  // ---------- small DOM helpers (textContent only: data is untrusted) ----------
+  function el(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  }
+  function svg(tag, attrs = {}) {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) if (v != null) n.setAttribute(k, v);
+    return n;
+  }
+  const ICONS = {
+    good: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--good)"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warning: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l7 12.5H1z" fill="var(--warning)"/><path d="M8 6v4" stroke="#0b0b0b" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#0b0b0b"/></svg>',
+    serious: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="var(--serious)"/><path d="M6 5v6M10 5v6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    critical: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--critical)"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  };
+  function icon(kind) { const t = document.createElement("template"); t.innerHTML = ICONS[kind]; return t.content.firstChild; }
+  function pill(kind, label) { return el("span", { class: "pill" }, icon(kind), el("span", { text: label })); }
+
+  // ---------- theme ----------
+  const themes = ["auto", "light", "dark"];
+  function applyTheme(t) {
+    if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+    $("theme").textContent = `Theme: ${t}`;
+  }
+  let theme = store.get("theme") || "auto";
+  applyTheme(theme);
+  $("theme").addEventListener("click", () => {
+    theme = themes[(themes.indexOf(theme) + 1) % themes.length];
+    store.set("theme", theme); applyTheme(theme); render();
+  });
+
+  // ---------- status ----------
+  function statusInfo(d) {
+    const st = d.status || {}, now = Date.now() / 1000;
+    const health = st.health;
+    if (health === "never") return { kind: "critical", label: "Not started", detail: "no checks recorded yet" };
+    if (health === "stopped") return { kind: "critical", label: "Stopped", detail: st.since ? `since ${when(st.since)}` : "" };
+    if (health === "stale") return { kind: "critical", label: "Not responding", detail: d.last_check ? `last check ${ago(d.last_check.ts)}` : "" };
+    if (st.phase === "checking") return { kind: "good", label: "Running", detail: "checking now…" };
+    if (st.phase === "claiming") return { kind: "good", label: "Running", detail: st.next_at > now ? `claiming 1 GB in ${clock(st.next_at - now)}` : "claiming 1 GB…" };
+    if (st.phase === "backoff") return { kind: "warning", label: "Retrying", detail: st.next_at ? `last check failed · retry in ${clock(st.next_at - now)}` : "last check failed" };
+    if (st.phase === "paused") return { kind: "serious", label: "Paused", detail: "login problem · see events" };
+    if (st.phase === "hold") return { kind: "serious", label: "Paused", detail: "by you · press Resume" };
+    return { kind: "good", label: "Running", detail: st.next_at ? (st.next_at > now ? `next check in ${clock(st.next_at - now)}` : "starting check…") : "" };
+  }
+  function renderStatus() {
+    const d = state.data; if (!d) return;
+    const s = statusInfo(d);
+    const box = $("status"); box.replaceChildren(icon(s.kind), el("span", { text: s.label }), s.detail ? el("span", { class: "detail", text: "· " + s.detail }) : null);
+    $("mode").hidden = !(d.status && d.status.dry_run);
+    const now = Date.now() / 1000, st = d.status || {};
+    if (st.phase === "hold") { $("m-next").textContent = "paused"; $("m-next-s").textContent = "until you resume"; }
+    else if (st.next_at && ["sleeping", "backoff", "paused"].includes(st.phase)) {
+      $("m-next").textContent = st.next_at > now ? `in ${clock(st.next_at - now)}` : "now";
+      $("m-next-s").textContent = `at ${when(st.next_at)}`;
+    } else if (st.phase === "checking" || st.phase === "claiming") {
+      $("m-next").textContent = st.phase === "claiming" ? "claiming" : "checking now";
+      $("m-next-s").textContent = st.since ? `started ${ago(st.since)}` : "";
+    } else { $("m-next").textContent = "–"; $("m-next-s").textContent = ""; }
+    if (d.current) { $("m-last").textContent = ago(d.current.ts); }
+  }
+
+  // ---------- hero + KPIs ----------
+  function renderHero(d) {
+    const c = d.current, thr = (d.status && d.status.threshold_mb) || 1024;
+    if (!c) {
+      $("hero-value").textContent = "–"; $("hero-sub").textContent = "No successful check yet";
+      $("m-last").textContent = "–"; $("m-last-s").textContent = ""; $("m-rate").textContent = "–"; return;
+    }
+    const total = c.total_mb || Math.max(c.remaining_mb, thr);
+    const pct = Math.max(0, Math.min(100, (c.remaining_mb / total) * 100));
+    $("hero-value").textContent = gb(c.remaining_mb);
+    $("hero-sub").textContent = `of ${gb(total, 1)} · ${nf0.format(pct)}% left · read via ${c.source === "api" ? "portal API" : "page text"}`;
+    const meter = $("meter");
+    meter.dataset.level = c.remaining_mb < thr ? "critical" : c.remaining_mb < 2 * thr ? "warning" : "ok";
+    meter.setAttribute("aria-valuenow", pct.toFixed(0));
+    meter.setAttribute("aria-valuetext", `${gb(c.remaining_mb)} of ${gb(total, 1)}`);
+    $("meter-fill").style.width = `${pct}%`;
+    const tickPct = Math.min(100, (thr / total) * 100);
+    $("meter-tick").style.left = `calc(${tickPct}% - 1px)`;
+    $("meter-left").textContent = "0";
+    $("meter-right").textContent = gb(total, 1);
+    $("m-last").textContent = ago(c.ts);
+    $("m-last-s").textContent = when(c.ts) + (d.last_check && !d.last_check.ok ? " · newer check failed" : "");
+    const rate = c.rate_mb_min;
+    $("m-rate").textContent = rate == null ? "–" : rate < 0.05 ? "idle" : `${gb(rate * 60, 1)}/h`;
+    const left = c.remaining_mb - thr;
+    $("m-rate-s").textContent = rate && rate > 0.05 && left > 0 ? `1 GB line in ~${dur((left / rate) * 60)}` : rate == null ? "needs 2 checks" : "";
+  }
+
+  function renderKpis(d) {
+    const s = d.stats || {}, rangeName = { "24h": "Last 24 hours", "7d": "Last 7 days", "30d": "Last 30 days" }[d.range];
+    $("kpi-title").textContent = rangeName;
+    const tiles = [
+      ["Free GB claimed", s.claims != null ? `${s.claims}` : "–", s.claims ? `+${gb(s.claimed_mb, 1)} · ${s.claim_attempts - s.claims > 0 ? (s.claim_attempts - s.claims) + " unverified" : "all verified"}` : "no claims needed"],
+      ["Data used", s.used_mb != null ? gb(s.used_mb, 1) : "–", s.used_mb_per_h != null ? `≈ ${gb(s.used_mb_per_h, 1)} per hour` : ""],
+      ["Checks", s.checks != null ? nf0.format(s.checks) : "–", s.median_interval_s ? `typically every ${dur(s.median_interval_s)}` : ""],
+      ["Logins", s.logins != null ? nf0.format(s.logins) : "–", "session reused otherwise"],
+      ["Failed checks", s.errors != null ? nf0.format(s.errors) : "–", s.checks ? `${nf0.format(100 - (100 * (s.errors || 0)) / Math.max(1, s.checks))}% success` : ""],
+      ["All-time claims", nf0.format(d.totals.claims || 0), `+${gb(d.totals.claimed_mb || 0, 1)} free`],
+    ];
+    $("kpis").replaceChildren(...tiles.map(([label, value, note]) =>
+      el("div", { class: "kpi" }, el("div", { class: "label", text: label }), el("div", { class: "value", text: value }), el("div", { class: "note", text: note }))));
+  }
+
+  // ---------- chart utilities ----------
+  function niceTicks(max, count = 4, minStep = 0) {
+    if (!(max > 0)) return [0, 1];
+    const raw = Math.max(max / count, minStep), mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = Math.max(minStep, [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || 10 * mag);
+    const ticks = []; for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(+v.toFixed(10));
+    if (ticks[ticks.length - 1] < max) ticks.push(+(ticks[ticks.length - 1] + step).toFixed(10));
+    return ticks;
+  }
+  function axisGb(ticks) { // MB values -> labels; decimals only when the step needs them
+    const step = ticks.length > 1 ? (ticks[1] - ticks[0]) / 1024 : 1;
+    const digits = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+    const f = new Intl.NumberFormat("en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return (v) => (v === 0 ? "0" : `${f.format(v / 1024)} GB`);
+  }
+  function timeTicks(t0, t1, width) {
+    const span = t1 - t0, maxTicks = Math.max(2, Math.floor(width / 90));
+    const steps = [3600, 2 * 3600, 3 * 3600, 4 * 3600, 6 * 3600, 12 * 3600, 86400, 2 * 86400, 5 * 86400, 7 * 86400];
+    const step = steps.find((s) => span / s <= maxTicks) || 7 * 86400;
+    const ticks = [];
+    const first = new Date(t0 * 1000);
+    if (step < 86400) { first.setMinutes(0, 0, 0); } else { first.setHours(0, 0, 0, 0); }
+    for (let t = first.getTime() / 1000; t <= t1; t += step) {
+      if (t < t0) continue;
+      if (step < 86400 && new Date(t * 1000).getHours() % (step / 3600) !== 0) continue;
+      ticks.push(t);
+    }
+    const fmt = (t) => {
+      const d = new Date(t * 1000);
+      if (step < 86400) return d.getHours() === 0 ? wd.format(d) : tFmt.format(d);
+      return dShort.format(d);
+    };
+    return ticks.map((t) => [t, fmt(t)]);
+  }
+  function tooltipFor(container) {
+    let tip = container.querySelector(".tooltip");
+    if (!tip) { tip = el("div", { class: "tooltip", role: "presentation" }); container.append(tip); }
+    return {
+      show(x, y, head, rows) {
+        tip.replaceChildren(el("div", { class: "t-head", text: head }), ...rows.map(([key, value, label]) =>
+          el("div", { class: "t-row" }, key, el("b", { text: value }), el("span", { class: "lbl", text: label }))));
+        tip.classList.add("on");
+        const cw = container.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+        let left = x + 14; if (left + tw > cw) left = x - tw - 14; if (left < 0) left = 0;
+        tip.style.left = `${left}px`; tip.style.top = `${Math.max(0, y - th - 10)}px`;
+      },
+      hide() { tip.classList.remove("on"); },
+    };
+  }
+  const lineKey = (color) => el("i", { class: "key-line", style: `background:${color}` });
+  const rectKey = (color) => el("i", { class: "key-rect", style: `background:${color}` });
+  function roundedTopBar(x, y, w, h, r = 4) {
+    if (h <= 0) return "";
+    r = Math.min(r, w / 2, h);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  }
+  function toggleTable(id, tableBuilder) {
+    const box = $(id);
+    if (!state.tables.has(id)) return false;
+    box.replaceChildren(el("div", { class: "tbl-wrap" }, tableBuilder()));
+    return true;
+  }
+  function table(headers, rows, numeric = []) {
+    const thead = el("thead", {}, el("tr", {}, ...headers.map((h, i) => el("th", { class: numeric.includes(i) ? "num" : null, text: h }))));
+    const tbody = el("tbody", {}, ...rows.map((r) => el("tr", {}, ...r.map((c, i) =>
+      c instanceof Node ? el("td", { class: numeric.includes(i) ? "num" : null }, c) : el("td", { class: numeric.includes(i) ? "num" : null, text: c })))));
+    return el("table", {}, thead, tbody);
+  }
+
+  // ---------- chart: data left over time ----------
+  function renderRemaining(d) {
+    const box = $("c-remaining");
+    const tableRows = () => table(["Time", "Data left"], d.series.slice().reverse().slice(0, 300).map(([t, v]) => [when(t), gb(v)]), [1]);
+    if (toggleTable("c-remaining", tableRows)) return;
+    box.replaceChildren();
+    if (!d.series.length) { box.append(el("div", { class: "empty", text: "No checks in this range yet." })); return; }
+    const W = Math.max(320, box.clientWidth), H = 240, m = { l: 48, r: 14, t: 10, b: 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const t0 = d.range_start, t1 = d.now;
+    const thr = (d.status && d.status.threshold_mb) || 1024;
+    const maxV = Math.max(...d.series.map((p) => p[1]), ...(d.claims || []).map((c) => c.after_mb || 0), thr * 1.5);
+    const yt = niceTicks(maxV / 1024, 4).map((g) => g * 1024);
+    const yMax = yt[yt.length - 1];
+    const x = (t) => m.l + ((t - t0) / (t1 - t0)) * pw;
+    const y = (v) => m.t + ph - (v / yMax) * ph;
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", tabindex: "0",
+      "aria-label": `Data left over time, ${d.series.length} checks. Latest ${gb(d.series[d.series.length - 1][1])}.` });
+    const fy = axisGb(yt);
+    for (const v of yt) {
+      s.append(svg("line", { class: v === 0 ? "baseline" : "gridline", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const lbl = svg("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }); lbl.textContent = fy(v); s.append(lbl);
+    }
+    for (const [t, label] of timeTicks(t0, t1, pw)) {
+      const lbl = svg("text", { x: x(t), y: H - 6, "text-anchor": "middle" }); lbl.textContent = label; s.append(lbl);
+    }
+    // threshold
+    s.append(svg("line", { class: "threshold", x1: m.l, x2: W - m.r, y1: y(thr), y2: y(thr) }));
+    const tl = svg("text", { class: "threshold-label halo", x: m.l + 6, y: y(thr) - 5, "text-anchor": "start" }); tl.textContent = "1 GB rebook line";
+    // area + line; break the line where checks are far apart (bot was down)
+    const pts = d.series;
+    const gaps = [];
+    const med = pts.length > 2 ? pts.slice(1).map((p, i) => p[0] - pts[i][0]).sort((a, b) => a - b)[Math.floor((pts.length - 1) / 2)] : 0;
+    const gapLimit = Math.max(3 * 3600, med * 8);
+    let seg = [];
+    const segs = [];
+    for (let i = 0; i < pts.length; i++) {
+      if (i && pts[i][0] - pts[i - 1][0] > gapLimit) { segs.push(seg); seg = []; gaps.push(i); }
+      seg.push(pts[i]);
+    }
+    segs.push(seg);
+    for (const sg of segs) {
+      if (!sg.length) continue;
+      const line = sg.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+      const area = `${line}L${x(sg[sg.length - 1][0]).toFixed(1)},${y(0)}L${x(sg[0][0]).toFixed(1)},${y(0)}Z`;
+      s.append(svg("path", { d: area, fill: "var(--series-1-wash)", stroke: "none" }));
+      s.append(svg("path", { d: line, fill: "none", stroke: "var(--series-1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    }
+    // end marker
+    const last = pts[pts.length - 1];
+    s.append(svg("circle", { cx: x(last[0]), cy: y(last[1]), r: 4, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    const endLbl = svg("text", { class: "end-label halo", x: Math.min(x(last[0]), W - m.r) - 8, y: Math.max(m.t + 12, y(last[1]) - 10), "text-anchor": "end" });
+    endLbl.textContent = gb(last[1]);
+    // claims
+    const claims = (d.claims || []).filter((c) => !c.dry_run);
+    for (const c of claims) {
+      const v = c.after_mb ?? c.before_mb;
+      s.append(svg("circle", { cx: x(c.ts), cy: y(v), r: 4.5, fill: c.verified ? "var(--series-2)" : "var(--surface)", stroke: c.verified ? "var(--surface)" : "var(--series-2)", "stroke-width": 2 }));
+    }
+    s.append(tl, endLbl);
+    // hover layer
+    const cross = svg("line", { class: "crosshair", y1: m.t, y2: m.t + ph, visibility: "hidden" });
+    const dot = svg("circle", { r: 5, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden", "pointer-events": "none" });
+    const hit = svg("rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent" });
+    s.append(cross, dot, hit);
+    box.append(s);
+    const tip = tooltipFor(box);
+    let idx = pts.length - 1;
+    const near = (t) => { let lo = 0, hi = pts.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (pts[mid][0] < t) lo = mid; else hi = mid; } return Math.abs(pts[lo][0] - t) <= Math.abs(pts[hi][0] - t) ? lo : hi; };
+    const show = (i) => {
+      idx = Math.max(0, Math.min(pts.length - 1, i));
+      const [t, v] = pts[idx], px = x(t), py = y(v);
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+      dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("visibility", "visible");
+      const rows = [[lineKey("var(--series-1)"), gb(v), "data left"]];
+      const nextT = idx < pts.length - 1 ? pts[idx + 1][0] : Infinity, prevT = idx ? pts[idx - 1][0] : -Infinity;
+      for (const c of claims) if (c.ts > (prevT + t) / 2 && c.ts <= (t + nextT) / 2) rows.push([el("i", { class: "key-dot", style: "background:var(--series-2)" }), signedGb(c.gained_mb), c.verified ? "claimed" : "claim not verified"]);
+      tip.show(px, py, `${dFmt.format(new Date(t * 1000))}, ${tsFmt.format(new Date(t * 1000))}`, rows);
+    };
+    const hide = () => { cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); tip.hide(); };
+    hit.addEventListener("pointermove", (e) => { const r = s.getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; show(near(t0 + ((px - m.l) / pw) * (t1 - t0))); });
+    hit.addEventListener("pointerleave", hide);
+    s.addEventListener("focus", () => show(idx));
+    s.addEventListener("blur", hide);
+    s.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") { show(idx - 1); e.preventDefault(); } if (e.key === "ArrowRight") { show(idx + 1); e.preventDefault(); } });
+  }
+
+  // ---------- chart: used vs claimed ----------
+  function bucketLabel(key, bucket) {
+    if (bucket === "hour") { const [d, h] = key.split("T"); return { short: h, long: `${dFmt.format(new Date(d + "T12:00"))}, ${h}–${String((+h.slice(0, 2) + 1) % 24).padStart(2, "0")}:00` }; }
+    const dt = new Date(key + "T12:00");
+    return { short: dShort.format(dt), long: dFmt.format(dt) };
+  }
+  function renderUsage(d) {
+    const box = $("c-usage");
+    $("usage-title").textContent = `Data used vs. claimed, per ${d.bucket}`;
+    const b = d.buckets || [];
+    const tableRows = () => table([d.bucket === "hour" ? "Hour" : "Day", "Used", "Claimed", "Claims"],
+      b.slice().reverse().map((r) => [bucketLabel(r.key, d.bucket).long, gb(r.used_mb), gb(r.claimed_mb), String(r.claims)]), [1, 2, 3]);
+    if (toggleTable("c-usage", tableRows)) return;
+    box.replaceChildren();
+    if (!b.some((r) => r.used_mb > 0 || r.claimed_mb > 0)) { box.append(el("div", { class: "empty", text: "No usage measured in this range yet." })); return; }
+    const W = Math.max(300, box.clientWidth), H = 220, m = { l: 48, r: 8, t: 10, b: 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const maxV = Math.max(...b.map((r) => Math.max(r.used_mb, r.claimed_mb)), 1);
+    const inGb = maxV >= 1024;
+    const yt = niceTicks(inGb ? maxV / 1024 : maxV, 4).map((v) => (inGb ? v * 1024 : v));
+    const yMax = yt[yt.length - 1];
+    const y = (v) => m.t + ph - (v / yMax) * ph;
+    const band = pw / b.length, gap = 2;
+    const bw = Math.max(2, Math.min(24, (band * 0.72 - gap) / 2));
+    const fy = axisGb(yt);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": `Data used and claimed per ${d.bucket}` });
+    for (const v of yt) {
+      s.append(svg("line", { class: v === 0 ? "baseline" : "gridline", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const lbl = svg("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }); lbl.textContent = inGb ? fy(v) : v === 0 ? "0" : `${nf0.format(v)} MB`; s.append(lbl);
+    }
+    const every = Math.ceil(b.length / Math.max(2, Math.floor(pw / 56)));
+    const tip = tooltipFor(box);
+    b.forEach((r, i) => {
+      const cx = m.l + band * i + band / 2;
+      if (i % every === 0) { const lbl = svg("text", { x: cx, y: H - 6, "text-anchor": "middle" }); lbl.textContent = bucketLabel(r.key, d.bucket).short; s.append(lbl); }
+      [["used_mb", "var(--series-1)", "used", -1], ["claimed_mb", "var(--series-2)", "claimed", 1]].forEach(([k, color, name, side]) => {
+        const v = r[k]; const bx = side < 0 ? cx - gap / 2 - bw : cx + gap / 2;
+        const p = svg("path", { class: "bar", d: roundedTopBar(bx, y(v), bw, y(0) - y(v)), fill: color });
+        const hitR = svg("rect", { x: bx - gap / 2, y: m.t, width: bw + gap, height: ph, fill: "transparent", tabindex: "0", "aria-label": `${bucketLabel(r.key, d.bucket).long}: ${name} ${gb(v)}` });
+        const on = () => { p.classList.remove("dim"); s.querySelectorAll(".bar").forEach((o) => { if (o !== p) o.classList.add("dim"); });
+          tip.show(bx + bw / 2, y(v), bucketLabel(r.key, d.bucket).long, [[rectKey(color), gb(v), name], ...(k === "claimed_mb" && r.claims ? [[el("span"), String(r.claims), r.claims === 1 ? "claim" : "claims"]] : [])]); };
+        const off = () => { s.querySelectorAll(".bar").forEach((o) => o.classList.remove("dim")); tip.hide(); };
+        hitR.addEventListener("pointerenter", on); hitR.addEventListener("pointerleave", off);
+        hitR.addEventListener("focus", on); hitR.addEventListener("blur", off);
+        s.append(p, hitR);
+      });
+    });
+    box.append(s);
+  }
+
+  // ---------- chart: interval histogram ----------
+  function renderIntervals(d) {
+    const box = $("c-intervals");
+    const iv = (d.intervals || []).map((s) => s / 60);
+    const st = d.stats || {};
+    $("intervals-foot").textContent = iv.length ? `X axis: minutes waited · median ${dur(st.median_interval_s)} · shortest ${dur(st.min_interval_s)} · longest ${dur(st.max_interval_s)}` : "";
+    const sorted = iv.slice().sort((a, b) => a - b);
+    const p95 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] : 0;
+    const cap = Math.max(5, Math.ceil(p95));
+    const binW = cap <= 15 ? 1 : cap <= 40 ? 2 : 5;
+    const nb = Math.ceil(cap / binW);
+    const bins = Array.from({ length: nb + 1 }, (_, i) => ({ lo: i * binW, hi: i < nb ? (i + 1) * binW : Infinity, n: 0 }));
+    for (const v of iv) bins[Math.min(nb, Math.floor(v / binW))].n++;
+    const label = (bn) => (bn.hi === Infinity ? `${bn.lo}+ min` : `${bn.lo}–${bn.hi} min`);
+    const tableRows = () => table(["Wait", "Checks"], bins.filter((bn) => bn.n).map((bn) => [label(bn), String(bn.n)]), [1]);
+    if (toggleTable("c-intervals", tableRows)) return;
+    box.replaceChildren();
+    if (!iv.length) { box.append(el("div", { class: "empty", text: "Needs a few checks first." })); return; }
+    const W = Math.max(300, box.clientWidth), H = 196, m = { l: 36, r: 8, t: 10, b: 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const yt = niceTicks(Math.max(...bins.map((bn) => bn.n), 1), 3, 1), yMax = yt[yt.length - 1];
+    const y = (v) => m.t + ph - (v / yMax) * ph;
+    const band = pw / bins.length, bw = Math.min(24, Math.max(2, band - 2));
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Histogram of the wait between checks" });
+    for (const v of yt) {
+      s.append(svg("line", { class: v === 0 ? "baseline" : "gridline", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const lbl = svg("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }); lbl.textContent = nf0.format(v); s.append(lbl);
+    }
+    const every = Math.ceil(bins.length / Math.max(2, Math.floor(pw / 44)));
+    const tip = tooltipFor(box);
+    bins.forEach((bn, i) => {
+      const bx = m.l + band * i + (band - bw) / 2;
+      if (i % every === 0 || i === bins.length - 1) { const lbl = svg("text", { x: m.l + band * i + band / 2, y: H - 6, "text-anchor": "middle" }); lbl.textContent = bn.hi === Infinity ? `${bn.lo}+` : `${bn.lo}`; s.append(lbl); }
+      const p = svg("path", { class: "bar", d: roundedTopBar(bx, y(bn.n), bw, y(0) - y(bn.n)), fill: "var(--series-1)" });
+      const hitR = svg("rect", { x: m.l + band * i, y: m.t, width: band, height: ph, fill: "transparent", tabindex: "0", "aria-label": `${label(bn)}: ${bn.n} checks` });
+      const on = () => { s.querySelectorAll(".bar").forEach((o) => o.classList.toggle("dim", o !== p)); tip.show(bx + bw / 2, y(bn.n), `waited ${label(bn)}`, [[rectKey("var(--series-1)"), String(bn.n), bn.n === 1 ? "check" : "checks"]]); };
+      const off = () => { s.querySelectorAll(".bar").forEach((o) => o.classList.remove("dim")); tip.hide(); };
+      hitR.addEventListener("pointerenter", on); hitR.addEventListener("pointerleave", off);
+      hitR.addEventListener("focus", on); hitR.addEventListener("blur", off);
+      s.append(p, hitR);
+    });
+    box.append(s);
+  }
+
+  // ---------- history tables ----------
+  const ROUTES = { reload: "reload", goto: "open page", via_bookings: "via bookings" };
+  const EVENTS = {
+    start: ["good", "Started"], stop: ["critical", "Stopped"], restart: ["warning", "Restarting"],
+    login: ["good", "Logged in"], browser_start: ["good", "Browser started"], recovered: ["good", "Recovered"],
+    error: ["critical", "Check failed"], login_rejected: ["critical", "Login rejected"], login_paused: ["serious", "Logins paused"],
+    cap_reached: ["warning", "Claim cap reached"], manual: ["good", "Manual check"],
+    hold: ["serious", "Paused by you"], resume: ["good", "Resumed"],
+  };
+  function renderHistory(d) {
+    const box = $("history"); let tbl, total;
+    if (state.tab === "checks") {
+      const rows = d.checks || []; total = rows.length;
+      tbl = table(["Time", "Data left", "Change", "Rate", "Next wait", "How", "Login", "Took", "Result"],
+        rows.slice(0, state.rows).map((c, i) => {
+          const older = rows.slice(i + 1).find((o) => o.ok && o.remaining_mb != null);
+          const change = c.ok && older ? c.remaining_mb - older.remaining_mb : null;
+          const result = c.ok ? (c.claimed ? pill("good", "OK · claimed") : pill("good", "OK")) : pill("critical", (c.error || "failed").slice(0, 70));
+          return [when(c.ts), c.ok ? gb(c.remaining_mb) : "–", change == null ? "–" : signedGb(change),
+            c.rate_mb_min == null ? "–" : `${nf1.format(c.rate_mb_min)} MB/min`, dur(c.next_in_s),
+            (c.route ? ROUTES[c.route] || c.route : "–") + (c.trigger === "manual" ? " · manual" : ""), c.logged_in ? "yes" : "–", dur(c.duration_s), result];
+        }), [1, 2, 3, 4, 7]);
+    } else if (state.tab === "claims") {
+      const rows = (d.claims || []).slice().reverse(); total = rows.length;
+      tbl = rows.length ? table(["Time", "Before", "After", "Gained", "Result", "Button"],
+        rows.slice(0, state.rows).map((c) => [when(c.ts), gb(c.before_mb), c.after_mb == null ? "–" : gb(c.after_mb), c.gained_mb == null ? "–" : signedGb(c.gained_mb),
+          c.dry_run ? pill("warning", "Dry run, not clicked") : c.verified ? pill("good", "Verified") : pill("critical", "Clicked, not verified"), c.button || "–"]), [1, 2, 3])
+        : el("div", { class: "empty", text: "No claims in this range. The bot only claims once you're under 1 GB." });
+    } else {
+      const rows = d.events || []; total = rows.length;
+      tbl = rows.length ? table(["Time", "Event", "Detail"], rows.slice(0, state.rows).map((e) => {
+        const [kind, label] = EVENTS[e.kind] || ["warning", e.kind];
+        const td = el("span", { text: e.detail || "" });
+        return [when(e.ts), pill(kind, label), td];
+      })) : el("div", { class: "empty", text: "No events in this range." });
+      if (tbl.tagName === "TABLE") tbl.querySelectorAll("tbody tr td:last-child").forEach((td) => td.classList.add("wrap"));
+    }
+    box.replaceChildren(tbl);
+    $("tab-count").textContent = total ? `${Math.min(total, state.rows)} of ${total}` : "";
+    $("more").hidden = total <= state.rows;
+  }
+
+  // ---------- wiring ----------
+  function render() {
+    const d = state.data; if (!d) return;
+    renderHero(d); renderKpis(d); renderStatus();
+    renderRemaining(d); renderUsage(d); renderIntervals(d); renderHistory(d);
+    renderSnapshot(d); renderSchedule(d); renderControls(d);
+  }
+
+  // ---------- snapshot ----------
+  function renderSnapshot(d) {
+    const info = (d.snapshots || {})[state.snap];
+    const errTab = document.querySelector('[data-snap="error"]');
+    errTab.hidden = !(d.snapshots && d.snapshots.error);
+    if (state.snap === "error" && errTab.hidden) state.snap = "latest";
+    const ts = state.snap === "error" ? info && info.ts : info;
+    const img = $("snap-img"), link = $("snap-link");
+    if (!ts) { img.removeAttribute("src"); link.removeAttribute("href"); $("snap-cap").textContent = "No snapshot yet. One is saved after every successful check."; return; }
+    const url = `/api/snapshot/${state.snap}?v=${Math.round(ts)}`;
+    if (img.getAttribute("src") !== url) img.src = url;
+    link.href = url;
+    $("snap-cap").textContent = `${state.snap === "error" ? "Error screenshot" : "Taken"} ${ago(ts)} · ${when(ts)} · click to open full size`;
+  }
+
+  // ---------- schedule ----------
+  function renderSchedule(d) {
+    const sc = (d.status && d.status.schedule) || { tier_high_mb: 5120, tier_mid_mb: 2048, high: [600, 1800], mid: [180, 600], low: [45, 180], quiet: [1, 7, 1200, 2400] };
+    const rem = d.current ? d.current.remaining_mb : null, rate = d.current ? d.current.rate_mb_min : null;
+    const hour = new Date().getHours(), [qs, qe, qmin, qmax] = sc.quiet;
+    const quiet = qs === qe ? false : qs < qe ? hour >= qs && hour < qe : hour >= qs || hour < qe;
+    const busy = rate != null && rate >= 5;
+    const pad = (h) => `${String(h).padStart(2, "0")}:00`;
+    const rows = [
+      ["night", `Night ${pad(qs)}–${pad(qe)}`, `every ${dur(qmin)}–${dur(qmax)}, unless data is being used fast`, quiet && !busy],
+      ["high", `More than ${gb(sc.tier_high_mb, 0)} left`, sc.keepalive
+        ? `every ${dur(sc.keepalive[0])}–${dur(sc.keepalive[1])}, so the portal session doesn't time out (it logs out after ~20 min idle)`
+        : `about every ${dur(sc.high[0])}; up to ${dur(sc.high[1])} or a bit more when you're barely using data`, !(quiet && !busy) && rem != null && rem > sc.tier_high_mb],
+      ["mid", `${nf0.format(sc.tier_mid_mb / 1024)}–${gb(sc.tier_high_mb, 0)} left`, `about every ${dur(sc.mid[0])}, up to ${dur(sc.mid[1])}`, !(quiet && !busy) && rem != null && rem > sc.tier_mid_mb && rem <= sc.tier_high_mb],
+      ["low", `Under ${gb(sc.tier_mid_mb, 0)} left`, `every ${dur(sc.low[0])}–${dur(sc.low[1])}; under 1 GB it claims after a short random delay`, !(quiet && !busy) && rem != null && rem <= sc.tier_mid_mb],
+    ];
+    $("sched").replaceChildren(...rows.map(([, w, how, now]) => el("li", { class: now ? "now" : null },
+      el("span", { class: "dot", "aria-hidden": "true" }), el("span", { class: "when", text: w }), el("span", { class: "how", text: how }))));
+    const logins = (d.stats && d.stats.logins) || 0;
+    $("sched-note").textContent = `It always looks again before you're projected to hit 1 GB. The session is kept between checks and restarts; it only logs in when the portal has signed it out, usually once after the night pause (${logins} ${logins === 1 ? "login" : "logins"} in this range; see Events for how long each session lasted).`;
+  }
+
+  // ---------- controls ----------
+  function renderControls(d) {
+    const st = d.status || {}, ctl = d.control || {};
+    const hold = st.phase === "hold" || ctl.hold;
+    const busy = st.phase === "checking" || st.phase === "claiming";
+    const bc = $("btn-check"), bh = $("btn-hold");
+    bc.disabled = busy || hold || ctl.check_requested || st.health === "never" || st.health === "stopped";
+    bc.title = busy ? "A check is running" : hold ? "Resume first" : ctl.check_requested ? "Already requested" : "Run one check now";
+    bh.textContent = hold ? "Resume" : "Pause";
+    bh.dataset.action = hold ? "resume" : "pause";
+  }
+  let toastTimer, fastUntil = 0;
+  function toast(msg) { $("toast").textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").textContent = ""; }, 8000); }
+  async function control(action) {
+    try {
+      const r = await fetch("/api/control", { method: "POST", headers: { "Content-Type": "application/json", "X-Alditalk-Dashboard": "1" }, body: JSON.stringify({ action }) });
+      const j = await r.json().catch(() => ({}));
+      toast(j.message || `HTTP ${r.status}`);
+      if (r.ok) { fastUntil = Date.now() + 90000; load(); }
+    } catch (e) { toast(`Couldn't reach the dashboard server (${e.message})`); }
+  }
+  async function load() {
+    document.querySelectorAll(".chart, .tbl-wrap").forEach((n) => n.classList.add("loading"));
+    try {
+      const r = await fetch(`/api/data?range=${encodeURIComponent(state.range)}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      state.data = await r.json();
+      $("updated").textContent = `Updated ${tsFmt.format(new Date())}`;
+      render();
+    } catch (e) {
+      $("updated").textContent = `Dashboard can't reach its data (${e.message}). Retrying…`;
+    } finally {
+      document.querySelectorAll(".chart, .tbl-wrap").forEach((n) => n.classList.remove("loading"));
+    }
+  }
+  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+    state.range = b.dataset.range; store.set("range", state.range);
+    document.querySelectorAll(".seg button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    state.rows = 30; load();
+  }));
+  document.querySelectorAll("[data-toggle]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.toggle;
+    if (state.tables.has(id)) state.tables.delete(id); else state.tables.add(id);
+    b.textContent = state.tables.has(id) ? "Show chart" : "Show table";
+    render();
+  }));
+  document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
+    state.tab = b.dataset.tab; state.rows = 30;
+    document.querySelectorAll("[data-tab]").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+    if (state.data) renderHistory(state.data);
+  }));
+  $("btn-check").addEventListener("click", () => { $("btn-check").disabled = true; control("check"); });
+  $("btn-hold").addEventListener("click", () => control($("btn-hold").dataset.action || "pause"));
+  document.querySelectorAll("[data-snap]").forEach((b) => b.addEventListener("click", () => {
+    state.snap = b.dataset.snap;
+    document.querySelectorAll("[data-snap]").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+    if (state.data) renderSnapshot(state.data);
+  }));
+  $("more").addEventListener("click", () => { state.rows += 50; if (state.data) renderHistory(state.data); });
+  const savedRange = store.get("range");
+  if (savedRange && ["24h", "7d", "30d"].includes(savedRange)) {
+    state.range = savedRange;
+    document.querySelectorAll(".seg button").forEach((o) => o.setAttribute("aria-pressed", String(o.dataset.range === savedRange)));
+  }
+  let rz, lastW = 0;
+  new ResizeObserver((entries) => {
+    const w = Math.round(entries[0].contentRect.width);
+    if (w === lastW) return; // height changes (tables growing) must not re-render charts
+    lastW = w; clearTimeout(rz);
+    rz = setTimeout(() => { if (state.data) { renderRemaining(state.data); renderUsage(state.data); renderIntervals(state.data); } }, 120);
+  }).observe(document.querySelector(".page"));
+  setInterval(renderStatus, 1000);
+  setInterval(() => { if (Date.now() >= fastUntil) load(); }, 15000);
+  setInterval(() => { if (Date.now() < fastUntil) load(); }, 2500);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  load();
+})();
+</script>
+</body>
+</html>

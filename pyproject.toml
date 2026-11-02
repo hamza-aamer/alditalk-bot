@@ -1,0 +1,38 @@
+[project]
+name = "alditalk"
+version = "0.1.0"
+description = "Auto-claims the free ALDI TALK 1 GB rebook, 24/7"
+authors = [
+    { name = "Hamza Aamer", email = "hamzaaamer6@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "playwright==1.64.1",
+    "pydantic-settings>=2.6",
+    "tzdata>=2026.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "ASYNC"]
+ignore = ["SIM105", "SIM108", "ASYNC240"]

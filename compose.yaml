@@ -1,0 +1,54 @@
+services:
+  alditalk:
+    build: .
+    image: alditalk-bot:latest
+    container_name: alditalk
+    hostname: alditalk            # stable hostname keeps Chrome's profile lock sane
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Europe/Berlin
+      STATE_DIR: /app/state
+      BROWSER_CHANNEL: chrome
+      TINI_KILL_PROCESS_GROUP: "1" # SIGTERM reaches python behind xvfb-run
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./state:/app/state
+    shm_size: 1gb
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-m", "alditalk.health"]
+      interval: 5m
+      timeout: 20s
+      start_period: 10m
+      retries: 2
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Read-only web dashboard: http://localhost:8377 (no credentials, reads ./state only)
+  dashboard:
+    image: alditalk-bot:latest
+    container_name: alditalk-dashboard
+    restart: unless-stopped
+    init: true
+    entrypoint: ["python", "-m", "alditalk", "dashboard"]
+    environment:
+      TZ: Europe/Berlin
+      STATE_DIR: /app/state
+      DASHBOARD_HOST: 0.0.0.0     # inside the container; published on host loopback only:
+    ports:
+      - "127.0.0.1:8377:8377"
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./state:/app/state
+    depends_on:
+      - alditalk
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
